@@ -1,5 +1,6 @@
 Model,Accuracy,Precision,Recall,F1,ROC-AUC,Train time (s)
-Linear SVM,0.9574,0.9535,0.9522,0.9528,0.9922,1.34
+Linear SVM,0.9574,0.9535,0.9522,0.9528,0.9922,1.46
 Passive Aggressive,0.9532,0.9491,0.9473,0.9482,0.9913,0.48
-Logistic Regression,0.9467,0.9421,0.94,0.9411,0.9879,0.79
+Logistic Regression,0.9467,0.9421,0.94,0.9411,0.9879,0.81
 Naive Bayes,0.8647,0.8316,0.8792,0.8547,0.9387,0.02
+Tuned Linear SVM,0.957,0.9532,0.9518,0.9525,0.9921,38.7369
