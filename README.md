@@ -78,6 +78,8 @@ You need Python 3.12 or newer.
    - `notebooks/01_eda.ipynb` cleans the data and creates `train.csv` and `test.csv`.
    - `notebooks/02_classical_models.ipynb` trains and evaluates the models, and its last cell saves `models/fake_news_model.joblib`.
 
+   Run the notebooks in VS Code with the Jupyter extension, or install Jupyter with `pip install jupyter`.
+
 5. Start the app:
 
    ```bash

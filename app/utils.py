@@ -13,7 +13,7 @@ from lime.lime_text import LimeTextExplainer
 
 from preprocess import clean_text
 
-# File locations, based on where this file lives (not where the app was started)
+# Paths relative to this file, not the working folder
 APP_DIR = Path(__file__).resolve().parent
 PROJECT_DIR = APP_DIR.parent
 MODEL_PATH = PROJECT_DIR / "models" / "fake_news_model.joblib"
@@ -22,10 +22,10 @@ SAMPLES_PATH = APP_DIR / "samples.json"
 CSS_PATH = APP_DIR / "style.css"
 TOP_WORDS_PATH = PROJECT_DIR / "reports" / "figures" / "top_words.png"
 
-MIN_WORDS = 20            # shorter texts don't give the model enough to work with
-MAX_EXPLAIN_WORDS = 1000  # LIME only looks at the start of very long articles, to stay fast
+MIN_WORDS = 20
+MAX_EXPLAIN_WORDS = 1000  # LIME is slow on very long articles
 
-# A normal browser User-Agent, because many news sites block unknown clients
+# Many news sites block requests without a browser User-Agent
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -35,18 +35,15 @@ HEADERS = {
 }
 
 
-# ---------- Loading files ----------
-
 @st.cache_resource
 def load_model():
-    """Load the saved model once. Returns None if the file is missing."""
+    """Load the saved model once; None if the file is missing."""
     if not MODEL_PATH.exists():
         return None
     return joblib.load(MODEL_PATH)
 
 
 def load_json(path, default):
-    """Read a JSON file, or return the default if it does not exist."""
     if not path.exists():
         return default
     with open(path, encoding="utf-8") as f:
@@ -54,29 +51,22 @@ def load_json(path, default):
 
 
 def load_model_info():
-    """Model name, test scores and dataset sizes saved by the notebook."""
     return load_json(INFO_PATH, {})
 
 
 def load_samples():
-    """The four demo articles."""
     return load_json(SAMPLES_PATH, [])
 
 
 def load_css():
-    """The page styles as a <style> tag."""
     return f"<style>{CSS_PATH.read_text(encoding='utf-8')}</style>"
 
 
 def word_count(text):
-    """Number of words in a text."""
     return len(text.split())
 
 
-# ---------- Prediction ----------
-
 def make_features(cleaned_text):
-    """Turn cleaned text into a TF-IDF vector."""
     return load_model().named_steps["tfidf"].transform([cleaned_text])
 
 
@@ -85,22 +75,15 @@ def predict_features(features):
     return float(load_model().named_steps["clf"].predict_proba(features)[0, 1])
 
 
-def predict(text):
-    """Probability that a raw article is fake: clean, convert to TF-IDF, predict."""
-    return predict_features(make_features(clean_text(text)))
-
-
 def verdict(fake_prob):
-    """The predicted label and how confident the model is in it."""
+    """The predicted label and the model's confidence in it."""
     if fake_prob >= 0.5:
         return "Fake", fake_prob
     return "Real", 1 - fake_prob
 
 
-# ---------- Fetching an article from a URL ----------
-
 class FetchError(Exception):
-    """A problem with a URL, with a message that is safe to show to the user."""
+    """A URL problem with a message that is safe to show the user."""
 
 
 def fetch_article(url):
@@ -126,7 +109,7 @@ def fetch_article(url):
     soup = BeautifulSoup(response.content, "html.parser")
     title = soup.title.get_text(" ", strip=True) if soup.title else ""
 
-    # Keep paragraphs with at least 5 words, to skip menus, buttons and captions
+    # At least 5 words, to skip menus, buttons and captions
     paragraphs = [p.get_text(" ", strip=True) for p in soup.find_all("p")]
     paragraphs = [p for p in paragraphs if word_count(p) >= 5]
     text = "\n\n".join(paragraphs)
@@ -139,22 +122,18 @@ def fetch_article(url):
     return {"title": title, "text": text, "url": url}
 
 
-# ---------- Explanation with LIME ----------
-
 @st.cache_resource
 def get_explainer():
-    """Create the LIME explainer once."""
     return LimeTextExplainer(class_names=["Real", "Fake"], random_state=42)
 
 
 def predict_many(texts):
-    """[P(real), P(fake)] for a list of raw texts. LIME calls this many times."""
+    """[P(real), P(fake)] for raw texts; LIME calls this many times."""
     return load_model().predict_proba([clean_text(text) for text in texts])
 
 
 def explain(text):
-    """The 10 words that pushed the prediction most, as (word, weight) pairs.
-    A positive weight pushes towards Fake, a negative weight towards Real."""
+    """Top 10 (word, weight) pairs; a positive weight pushes towards Fake."""
     short_text = " ".join(text.split()[:MAX_EXPLAIN_WORDS])
     explanation = get_explainer().explain_instance(
         short_text, predict_many, num_features=10, num_samples=500
@@ -162,20 +141,16 @@ def explain(text):
     return [(str(word), float(weight)) for word, weight in explanation.as_list()]
 
 
-# ---------- HTML pieces ----------
-
 def safe(text):
-    """Escape text for HTML (also "$", which Streamlit would read as maths)."""
+    """Escape text for HTML, including "$" which Streamlit reads as maths."""
     return html.escape(text).replace("$", "&#36;").replace("\n", "<br>")
 
 
 def sample_text(sample):
-    """A demo article as it appears in the text box: title line, then the text."""
     return f"{sample['title']}\n\n{sample['text']}"
 
 
 def hero_html(info):
-    """Header card with the title, subtitle and stat chips."""
     chips = ""
     if info:
         chip_texts = [
@@ -194,12 +169,10 @@ def hero_html(info):
 
 
 def notice_html(message):
-    """A friendly message box in the page colours."""
     return f'<div class="fn-notice">{safe(message)}</div>'
 
 
 def meter_html(fake_prob):
-    """Animated bar from Real to Fake with a marker at the fake probability."""
     percent = round(fake_prob * 100, 1)
     return (
         '<div class="fn-meter">'
@@ -214,7 +187,6 @@ def meter_html(fake_prob):
 
 
 def result_card_html(entry):
-    """The big verdict card for one check."""
     label, confidence = verdict(entry["fake_prob"])
     if label == "Fake":
         css_class, title = "fake", "⚠︎ Likely FAKE"
@@ -244,7 +216,6 @@ def result_card_html(entry):
 
 
 def legend_html():
-    """Small legend for the highlight colours."""
     return (
         '<div class="fn-legend">'
         '<span><i class="fn-swatch fake"></i>pushes towards Fake</span>'
@@ -254,14 +225,13 @@ def legend_html():
 
 
 def highlighted_text_html(text, weights, max_words=250):
-    """The start of the article with LIME's top words highlighted.
-    Stronger weight = stronger colour."""
+    """The start of the article with LIME's top words highlighted."""
     weight_of = dict(weights)
     biggest = max((abs(w) for w in weight_of.values()), default=1) or 1
 
     parts = []
     words_seen = 0
-    # Split into words and the spaces/punctuation between them, keeping both
+    # Keeps both the words and the gaps between them
     for token in re.split(r"(\W+)", text):
         if words_seen >= max_words:
             parts.append(" …")
@@ -274,7 +244,7 @@ def highlighted_text_html(text, weights, max_words=250):
                 style = f"background: rgba(234, 170, 0, {alpha:.2f})"
                 parts.append(f'<mark class="fn-hl fake" style="{style}">{safe(token)}</mark>')
             else:
-                alpha = 0.6 + 0.4 * strength  # stays dark enough for light text
+                alpha = 0.6 + 0.4 * strength
                 style = f"background: rgba(58, 15, 52, {alpha:.2f})"
                 parts.append(f'<mark class="fn-hl real" style="{style}">{safe(token)}</mark>')
         else:
@@ -286,7 +256,7 @@ def highlighted_text_html(text, weights, max_words=250):
 
 
 def top_words_html(weights):
-    """Top-10 words as bars: Real to the left of the centre line, Fake to the right."""
+    """Top-10 words as bars: Real left of the centre line, Fake right."""
     biggest = max((abs(w) for _, w in weights), default=1) or 1
     rows = []
     for word, weight in sorted(weights, key=lambda pair: abs(pair[1]), reverse=True):
@@ -311,7 +281,6 @@ def top_words_html(weights):
 
 
 def history_item_html(entry, is_current):
-    """A compact card for one check in the sidebar."""
     label, confidence = verdict(entry["fake_prob"])
     current = " current" if is_current else ""
     return (
@@ -324,7 +293,6 @@ def history_item_html(entry, is_current):
 
 
 def metrics_html(info):
-    """Test-set scores from model_info.json as a row of small stat cards."""
     names = [("Accuracy", "accuracy"), ("Precision", "precision"), ("Recall", "recall"), ("F1", "f1")]
     cards = "".join(
         f'<div class="fn-stat"><span>{info[key] * 100:.1f}%</span><small>{name}</small></div>'
@@ -334,7 +302,6 @@ def metrics_html(info):
 
 
 def footer_html():
-    """Project line and a reminder that the model checks style, not facts."""
     return (
         '<div class="fn-footer">'
         "<div>Fake News Detection using NLP · B.Tech CSE Training Project</div>"

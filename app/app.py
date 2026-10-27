@@ -1,7 +1,4 @@
-"""Fake News Detector: a Streamlit page that checks whether an article looks real or fake.
-
-Run from the project folder with:  streamlit run app/app.py
-"""
+"""Fake News Detector: a Streamlit page that checks whether an article looks real or fake."""
 
 from datetime import datetime
 
@@ -42,21 +39,18 @@ SAMPLES = load_samples()
 
 
 def html(content):
-    """Show a piece of our own HTML."""
     st.markdown(content, unsafe_allow_html=True)
 
 
-# ---------- Session state ----------
-
 def init_state():
-    """Create the values we keep between reruns, the first time the page loads."""
+    """Set the session values kept between reruns, on the first page load."""
     defaults = {
-        "history": [],        # every check, oldest first
-        "current_id": None,   # which check the result area shows
+        "history": [],
+        "current_id": None,
         "next_id": 1,
-        "article_text": "",   # contents of the text area
-        "sample_index": None, # which demo article was loaded last
-        "fetched": None,      # last article fetched from a URL
+        "article_text": "",
+        "sample_index": None,
+        "fetched": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -64,34 +58,28 @@ def init_state():
 
 
 def use_sample(index):
-    """Fill the text area with a demo article."""
     st.session_state.article_text = sample_text(SAMPLES[index])
     st.session_state.sample_index = index
 
 
 def show_entry(entry_id):
-    """Show an older check from the history."""
     st.session_state.current_id = entry_id
 
 
 def clear_history():
-    """Remove all checks."""
     st.session_state.history = []
     st.session_state.current_id = None
 
 
 def current_entry():
-    """The check the result area should show, if any."""
     for entry in st.session_state.history:
         if entry["id"] == st.session_state.current_id:
             return entry
     return None
 
 
-# ---------- Checking an article ----------
-
 def run_check(text, source, title=None, true_label=None):
-    """Predict and explain one article, showing each step, then save it in the history."""
+    """Predict and explain one article, then save it in the history."""
     with st.status("Checking the article...", expanded=True) as status:
         st.write("Cleaning text")
         cleaned = clean_text(text)
@@ -119,7 +107,6 @@ def run_check(text, source, title=None, true_label=None):
 
 
 def check_pasted_text():
-    """Check the text in the text area (pasted or a demo article)."""
     text = st.session_state.article_text.strip()
     if not text:
         html(notice_html("Paste an article first, or try one of the samples."))
@@ -140,7 +127,6 @@ def check_pasted_text():
 
 
 def check_url(url):
-    """Fetch an article from a URL and check it."""
     if not url.strip():
         html(notice_html("Enter the address of a news article first."))
         return
@@ -156,8 +142,6 @@ def check_url(url):
     text = f"{article['title']}\n\n{article['text']}".strip()
     run_check(text, "URL", article["title"] or article["url"])
 
-
-# ---------- Page sections ----------
 
 def paste_tab():
     st.text_area(
@@ -239,7 +223,6 @@ def history_sidebar():
             width="stretch",
         )
 
-        # Newest first
         for entry in reversed(history):
             is_current = entry["id"] == st.session_state.current_id
             html(history_item_html(entry, is_current))
@@ -267,8 +250,6 @@ def about_section(info):
         if TOP_WORDS_PATH.exists():
             st.image(str(TOP_WORDS_PATH), caption="Words the model links most with fake and real news")
 
-
-# ---------- Page ----------
 
 html(load_css())
 init_state()
