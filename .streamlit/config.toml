@@ -1,0 +1,16 @@
+[theme]
+base = "light"
+primaryColor = "#EAAA00"             # Marigold
+backgroundColor = "#DDE3E8"          # Ice Silver
+secondaryBackgroundColor = "#EEF1F4" # lighter tint of Ice Silver
+textColor = "#3A0F34"                # Deep Aubergine
+font = "sans-serif"
+linkColor = "#3A0F34"
+
+# Streamlit's built-in status colours, mapped to the same three colours
+redColor = "#3A0F34"
+greenColor = "#3A0F34"
+blueColor = "#3A0F34"
+violetColor = "#3A0F34"
+orangeColor = "#EAAA00"
+yellowColor = "#EAAA00"
