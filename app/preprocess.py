@@ -26,6 +26,10 @@ LEMMATIZER = WordNetLemmatizer()
 
 def clean_text(text: str) -> str:
     """Lowercase, remove noise and stopwords, and lemmatize each word."""
+    # Treat missing text (None or NaN) as an empty string
+    if not isinstance(text, str):
+        text = ""
+
     text = text.lower()
 
     # Remove URLs and HTML tags
